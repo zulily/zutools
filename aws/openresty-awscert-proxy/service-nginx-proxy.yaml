@@ -1,0 +1,26 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: openresty-awscert-proxy
+  labels:
+    app: openresty
+    role: awscert-proxy
+  annotations:
+          #service.beta.kubernetes.io/aws-load-balancer-internal: '0.0.0.0/0'
+          service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "REPLACE_WITH_CERT_ARN"
+spec:
+  #comment out SourceRanges with internal loadbalancer.
+  loadBalancerSourceRanges:
+    - 10.10.10.10/32
+  ports:
+  - name: http
+    port: 80
+    targetPort: ssl-proxy-http
+    protocol: TCP
+  selector:
+    app: openresty
+    role: awscert-proxy
+  type: LoadBalancer
+
+

@@ -1,0 +1,29 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: openresty-awscert-proxy
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: openresty-awscert-proxy
+      labels:
+        name: openresty
+        role: awscert-proxy
+    spec:
+      containers:
+      - name: openresty-awscert-proxy
+        image: openresty-awscert-proxy:latest
+        env:
+        - name: TARGET_SERVICE
+          value: '<target host>:<target port>'
+        - name: ENABLE_SSL
+          value: 'false'
+        - name: ENABLE_HTTP_RATE_LIMIT
+          value: 'true'
+        - name: RATE_REQS_SEC
+          value: '1'
+        ports:
+        - name: ssl-proxy-http
+          containerPort: 80

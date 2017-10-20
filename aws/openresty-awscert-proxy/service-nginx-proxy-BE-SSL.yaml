@@ -1,0 +1,25 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: openresty-awsssl-proxy
+  labels:
+    app: openresty
+    role: awsssl-proxy
+  annotations:
+          # uncomment for internal ELB
+          #service.beta.kubernetes.io/aws-load-balancer-internal: '0.0.0.0/0'
+          service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "https"
+          service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "REPLACE_WITH_CERT_ARN"
+spec:
+  #loadBalancerSourceRanges available on internal ELB when kubernetes >= 1.7.0:
+  loadBalancerSourceRanges:
+    - 10.10.10.10/32
+  ports:
+  - name: https
+    port: 443
+    targetPort: ssl-proxy-https
+    protocol: TCP
+  selector:
+    app: openresty
+    role: awsssl-proxy
+  type: LoadBalancer
