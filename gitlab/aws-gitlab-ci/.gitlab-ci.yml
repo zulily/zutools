@@ -1,0 +1,24 @@
+services:
+  - docker:dind
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_BUILD_REF
+  LATEST_TAG: $CI_REGISTRY_IMAGE:latest
+
+stages:
+  - build
+
+before_script:
+  # log into the gitlab-ci docker, using Secret Variables in gitlab
+  - docker login -u gitlab-ci-token -p $GITLAB_PASSWORD $CI_REGISTRY
+
+build_phase:
+  stage: build
+  script:
+    # Date used for versioning on ci/cd infrastructure
+    - MYDATE=`date +%Y%m%d`
+    - docker build -t $CI_REGISTRY_IMAGE:$MYDATE -f Dockerfile $CI_PROJECT_DIR
+    - docker tag $CI_REGISTRY_IMAGE:$MYDATE $CI_REGISTRY_IMAGE:latest
+    - docker push $CI_REGISTRY_IMAGE:$MYDATE 
+    - docker push $CI_REGISTRY_IMAGE:latest 
+

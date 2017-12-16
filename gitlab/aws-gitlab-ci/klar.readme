@@ -1,0 +1,2 @@
+Replace with klar binary built for your target OS from https://github.com/optiopay/klar
+(Ensure you have a Clair DB/Service available, as built from https://github.com/coreos/clair/tree/v2.0.1 )

@@ -1,0 +1,94 @@
+image: <REPLACE_WITH_REPO>/aws-gitlab-ci:<REPLACE_WITH_DATE>
+        
+services:
+  - docker:dind
+
+variables:
+  REGISTRY_ID: "<REPLACE_WITH_AWS_ACCOUNT>"
+  AWS_ECR_REGION: "<REPLACE_WITH_REGION>"
+  # KLAR severity threshold used to set the minimum value to halt build.
+  # {Unknown, Negligible, Low, Medium, High, Critical, Defcon1}
+  CLAIR_OUTPUT: "High"
+
+stages:
+  - build
+  - deploy
+
+before_script:
+  # log into the gitlab-ci docker
+  - docker login -u gitlab-ci-token -p $GITLAB_PASSWORD $CI_REGISTRY
+  - MYDATE=`date +%Y%m%d`
+
+.build_template: &build_steps
+  stage: build
+  script:
+    # maven or other build/compile would go here
+    # and then we spin up the dockerfile
+    - docker build -t $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE -f $DOCKERFILE $CI_PROJECT_DIR
+    - docker tag $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE $CI_REGISTRY_IMAGE:$VERSION
+    - docker tag $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE $CI_REGISTRY_IMAGE:${VERSION}_test
+    - docker push $CI_REGISTRY_IMAGE:${VERSION}_test
+    # run through clair  
+    - DOCKER_USER=gitlab-ci-token DOCKER_PASSWORD=$GITLAB_PASSWORD CLAIR_ADDR=$CLAIR_ADDR CLAIR_OUTPUT=$CLAIR_OUTPUT klar $CI_REGISTRY_IMAGE:${VERSION}_test
+    # push to gitlab registry
+    - docker push $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE 
+    - docker push $CI_REGISTRY_IMAGE:$VERSION 
+
+build_1610:
+  variables:
+    DOCKERFILE: "Dockerfile.v1610"
+    VERSION: "16.10"
+  <<: *build_steps
+  
+build_1604:
+  variables:
+    DOCKERFILE: "Dockerfile.v1604"
+    VERSION: "16.04"
+  <<: *build_steps
+  
+build_1404:
+  variables:
+    DOCKERFILE: "Dockerfile.v1404"
+    VERSION: "14.04"
+  <<: *build_steps
+  
+# Deployment, for default images, means a push to central (infra) ECR repo
+
+.deploy_template: &deploy_steps
+  stage: deploy
+  script:
+    - docker pull $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE 
+    #  log into ECR
+    - eval $(AWS_ACCESS_KEY_ID=$ECR_ACCESS_ID AWS_SECRET_ACCESS_KEY=$ECR_ACCESS_SECRET aws ecr get-login --region=$AWS_ECR_REGION)
+    #  find/add ECR repo
+    - AWS_ACCESS_KEY_ID=$ECR_ACCESS_ID AWS_SECRET_ACCESS_KEY=$ECR_ACCESS_SECRET ensure_ecr_repo.sh $CI_PROJECT_NAME $AWS_ECR_REGION $REGISTRY_ID
+    - docker tag $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE $ECR_IMAGE_TAG
+    - docker tag $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE ${ECR_IMAGE_TAG}_$MYDATE
+    - docker push $ECR_IMAGE_TAG
+    - docker push ${ECR_IMAGE_TAG}_$MYDATE
+
+
+deploy_1610:
+  variables:
+    VERSION: "16.10"
+    ECR_IMAGE_TAG: $REGISTRY_ID.dkr.ecr.$AWS_ECR_REGION.amazonaws.com/$CI_PROJECT_NAME:$VERSION
+  dependencies:
+    - build_1610
+  <<: *deploy_steps
+
+deploy_1604:
+  variables:
+    VERSION: "16.04"
+    ECR_IMAGE_TAG: $REGISTRY_ID.dkr.ecr.$AWS_ECR_REGION.amazonaws.com/$CI_PROJECT_NAME:$VERSION
+  dependencies:
+    - build_1604
+  <<: *deploy_steps
+
+deploy_1404:
+  variables:
+    VERSION: "14.04"
+    ECR_IMAGE_TAG: $REGISTRY_ID.dkr.ecr.$AWS_ECR_REGION.amazonaws.com/$CI_PROJECT_NAME:$VERSION
+  dependencies:
+    - build_1404
+  <<: *deploy_steps
+
