@@ -1,21 +1,26 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
-MAINTAINER Brion Stone <bstone@zulily.com>
+LABEL maintainer="bstone@zulily.com"
 
 
 # to update APT index with openresty and prepare dirs:
-# the --no-check-certificate is only due to the PaloAlto in Elliott. Remove at earliest possibile time.
 RUN \
   apt-get update && \
-  apt-get install -y wget && \
-  wget -q --no-check-certificate -O - https://openresty.org/package/pubkey.gpg | apt-key add - && \
-  echo "deb http://openresty.org/package/ubuntu xenial main" > /etc/apt/sources.list.d/openresty.list && \
+  apt-get install -y wget gnupg && \
+  wget -q -O - https://openresty.org/package/pubkey.gpg | apt-key add - && \
+  # for installing the add-apt-repository command
+  # (you can remove this package and its dependencies later):
+  apt-get -y install software-properties-common && \
+  # add the official APT repository:
+  add-apt-repository -y "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main" && \
   apt-get update  && \
   apt-get install openresty -y && \
-  rm -rf /var/lib/apt/lists/* && \
-  mkdir -p /usr/local/openresty/nginx/conf/conf.d && \
-  mkdir -p /usr/local/openresty/lualib/prometheus && \
-  rm /usr/local/openresty/nginx/conf/nginx.conf
+  # install prometheus library to generate nginx metrics.
+  opm get knyar/nginx-lua-prometheus && \
+  apt remove -y software-properties-common && \
+  apt autoremove -y && \
+  rm ~/.curlrc && \
+  rm -rf /var/lib/apt/lists/* 
 
 # add additional binaries into PATH for convenience
 ENV PATH=$PATH:/usr/local/openresty/luajit/bin/:/usr/local/openresty/nginx/sbin/:/usr/local/openresty/bin/

@@ -1,17 +1,17 @@
-FROM <REPLACE_WITH_REPO>:/alpine:3.6_<REPLACE_WITH_MONTH>
+FROM <REPLACE_WITH_REPO>:/alpine:3.9
 
-MAINTAINER Brion Stone <bstone@zulily.com>
+LABEL maintainer="bstone@zulily.com"
 
 RUN apk add --no-cache --update curl python python-dev py-pip git\
     && pip install awscli --ignore-installed six
 
 # Install Docker
-ENV DOCKER_BUCKET get.docker.com
-ENV DOCKER_VERSION 1.13.1
-ENV DOCKER_SHA256 97892375e756fd29a304bd8cd9ffb256c2e7c8fd759e12a55a6336e15100ad75
+ENV DOCKER_BUCKET download.docker.com
+ENV DOCKER_VERSION 18.09.0
+ENV DOCKER_SHA256 08795696e852328d66753963249f4396af2295a7fe2847b839f7102e25e47cb9
 RUN set -x \
     && apk add --no-cache openssh-client \
-    && curl -fSL "https://${DOCKER_BUCKET}/builds/Linux/x86_64/docker-$DOCKER_VERSION.tgz" -o docker.tgz \
+    && curl -fSL "https://${DOCKER_BUCKET}/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz" -o docker.tgz \
     && echo "${DOCKER_SHA256} *docker.tgz" | sha256sum -c - \
     && tar -xzvf docker.tgz \
     && mv docker/* /usr/local/bin/ \

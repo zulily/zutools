@@ -34,10 +34,10 @@ before_script:
     - docker push $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE 
     - docker push $CI_REGISTRY_IMAGE:$VERSION 
 
-build_1610:
+build_1804:
   variables:
-    DOCKERFILE: "Dockerfile.v1610"
-    VERSION: "16.10"
+    DOCKERFILE: "Dockerfile.v1804"
+    VERSION: "18.04"
   <<: *build_steps
   
 build_1604:
@@ -59,7 +59,7 @@ build_1404:
   script:
     - docker pull $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE 
     #  log into ECR
-    - eval $(AWS_ACCESS_KEY_ID=$ECR_ACCESS_ID AWS_SECRET_ACCESS_KEY=$ECR_ACCESS_SECRET aws ecr get-login --region=$AWS_ECR_REGION)
+    - eval $(AWS_ACCESS_KEY_ID=$ECR_ACCESS_ID AWS_SECRET_ACCESS_KEY=$ECR_ACCESS_SECRET aws ecr get-login --region=$AWS_ECR_REGION --no-include-email)
     #  find/add ECR repo
     - AWS_ACCESS_KEY_ID=$ECR_ACCESS_ID AWS_SECRET_ACCESS_KEY=$ECR_ACCESS_SECRET ensure_ecr_repo.sh $CI_PROJECT_NAME $AWS_ECR_REGION $REGISTRY_ID
     - docker tag $CI_REGISTRY_IMAGE:${VERSION}_$MYDATE $ECR_IMAGE_TAG
@@ -68,12 +68,12 @@ build_1404:
     - docker push ${ECR_IMAGE_TAG}_$MYDATE
 
 
-deploy_1610:
+deploy_1804:
   variables:
-    VERSION: "16.10"
+    VERSION: "18.04"
     ECR_IMAGE_TAG: $REGISTRY_ID.dkr.ecr.$AWS_ECR_REGION.amazonaws.com/$CI_PROJECT_NAME:$VERSION
   dependencies:
-    - build_1610
+    - build_1804
   <<: *deploy_steps
 
 deploy_1604:
